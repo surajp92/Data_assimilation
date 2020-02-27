@@ -68,31 +68,9 @@ def lorenz(X_init,sigma,rho,beta,dt,nt):
     X[0,2] = X_init[2]
     
     for n in range(1,nt+1):
-        x = X[n-1,0]
-        y = X[n-1,1]
-        z = X[n-1,2]
-        X[n,0] = x - dt*sigma*(x - y)
-        X[n,1] = y + dt*(rho*x - y - x*z)
-        X[n,2] = z + dt*(x*y - beta*z)
-    
-    return X
-
-def lorenz_rk4(X_init,sigma,rho,beta,dt,nt):
-    X = np.zeros((nt+1,3))
-    
-    X[0,0] = X_init[0]
-    X[0,1] = X_init[1]
-    X[0,2] = X_init[2]
-    
-    for n in range(1,nt+1):
-        x = X[n-1,0]
-        y = X[n-1,1]
-        z = X[n-1,2]
-        X[n,0] = x + 0.5*dt*sigma*(2.0*(y - x) + dt*(rho*x - y - x*z) - sigma*dt*(y - x))
-        
-        X[n,1] = y + 0.5*dt*(rho*x - y - x*z + rho*(x + sigma*dt*(y - x)) - y - dt*(rho*x - y - x*z) - (x + sigma*dt*(y - x))*(z + dt*(x*y - beta*z)))
-        
-        X[n,2] = z + 0.5*dt*(x*y - beta*z + (x + dt*sigma*(y - x))*(y + dt*(rho*x - y - x*z)) - beta*z - dt*(x*y - beta*z)) 
+        X[n,0] = X[n-1,0] - dt*sigma*(X[n-1,0] - X[n-1,1])
+        X[n,1] = X[n-1,1] + dt*(rho*X[n-1,0] - X[n-1,1] - X[n-1,0]*X[n-1,2])
+        X[n,2] = X[n-1,2] + dt*(X[n-1,0]*X[n-1,1] - beta*X[n-1,2])
     
     return X
 
@@ -155,7 +133,7 @@ sigma = 10.0
 rho = 28.0
 beta = 8/3
 
-dt = 0.01
+dt = 0.02
 t_train = 2.0
 t_max = 5.0
 freq = 5
@@ -166,11 +144,11 @@ varl = np.array([0.09])
 var = varl[q]
 std = np.sqrt(var)
 
-max_iter = 50
+max_iter = 2
 tolerance = 1e-3
 
 mode = 1 # 0: Static, 1 Dynamics
-lr = 0.01
+lr = 1
 
 X_init = np.ones(3)
 X_da_init = 1.1*np.ones(3)
@@ -210,22 +188,22 @@ for q in range(max_iter):
     ofk = obj_function(zobs,xdaobs,rk,nobs)
     
     pk = -np.copy(grad)
-    lr = -0.5*ofk/(grad.T @ pk)
+    #lr = -0.5*ofk/(grad.T @ pk)
     #print(lr)
-    xkp = xdaobs + lr*pk.reshape(1,3)
-    #xkp = xdaobs + pk.reshape(1,3)
+    xkp = xdaobs + pk.reshape(1,3)    
+    xk2p = xdaobs + 2.0*pk.reshape(1,3)    
     
     ofkp = obj_function(zobs,xkp,rk,nobs)
+    ofk2p = obj_function(zobs,xk2p,rk,nobs)
     
     if mode == 0:
         lr = lr
     elif mode == 1:
         temp = grad.T @ pk
-        lr = -temp*lr**2/(2.0*(ofkp - lr*temp - ofk))
-        #lr = -temp/(2.0*(ofkp - temp - ofk))
+        lr = (temp +0.5*ofk2p -2.0*ofkp + 2.0*ofk)/(ofk2p - 2.0*ofkp + 2.0*ofk)
         lr = lr[0]
     
-    xnew = xold - lr*grad.flatten() #/np.linalg.norm(grad.flatten())
+    xnew = xold - lr*grad.flatten()  #np.abs(grad.flatten())
     
     print(q, ' ', lr, ' ', np.linalg.norm(grad))
     
@@ -240,15 +218,15 @@ for q in range(max_iter):
 
     xold = np.copy(xnew)
 
-Xtrue_tmax1 = lorenz(X_init,sigma,rho,beta,dt,ntmax)
+Xtrue_tmax = lorenz(X_init,sigma,rho,beta,dt,ntmax)
 Xda_tmax = lorenz(xnew,sigma,rho,beta,dt,ntmax)
 
-plot_lorenz(q,t_train,Xtrue_tmax1,ttmax,zobs,tobs,Xda_tmax,ttmax)
+plot_lorenz(q,t_train,Xtrue_tmax,ttmax,zobs,tobs,Xda_tmax,ttmax)
 plot_residual(res_history)
 
 #%% Conjugate gradient
     
-for q in range(10):
+for q in range(1):
     xda = lorenz(xold,sigma,rho,beta,dt,nttrain)
     
     xdaobs = xda[ind]
@@ -258,39 +236,36 @@ for q in range(10):
     if q == 0:
         pk = -np.copy(gradk)
         resk = -np.copy(gradk)
-    
-    #lr = -0.5*ofk/(grad.T @ pk)
-    xkp = xdaobs + lr*pk.reshape(1,3)    
-#    xkp = xdaobs + pk.reshape(1,3)
+        
+    xkp = xdaobs + pk.reshape(1,3)
     
     ofk = obj_function(zobs,xdaobs,rk,nobs)
     ofkp = obj_function(zobs,xkp,rk,nobs)
     
     temp = np.dot(gradk.T,pk)
-    lr = -temp*lr**2/(2.0*(ofkp - lr*temp - ofk))
-#    lr = -temp/(2.0*(ofkp - temp - ofk))
-    lr = lr[0]
+    lr = -temp/(2.0*(ofkp - temp - ofk))
     
-    xnew = xold + lr*pk.flatten() #/np.linalg.norm(pk)  #np.abs(grad.flatten())
+    xnew = xold + lr.flatten()*pk.flatten()  #np.abs(grad.flatten())
     
     xdap = lorenz(xnew,sigma,rho,beta,dt,nttrain)
     xdaobsp = xdap[ind]
     gradkp = fourdvar(zobs,xdaobsp,dxk_h,rk,nobs)
     
-    #beta_cg = np.dot(gradkp.T,gradk)/(np.dot(gradk.T,gradk))
-    beta_pr = np.dot(gradkp.T,(gradkp - gradk))/(np.dot(gradk.T,gradk))
-    beta_cg = np.max((0.0, beta_pr[0,0]))
+    beta = np.dot(gradkp.T,gradk)/(np.dot(gradk.T,gradk))
     
-    pk = -gradkp + beta_cg*pk
+    pk = -gradkp + beta*pk
     
     #print(p, ' ', xold, ' ' , xnew, ' ', np.linalg.norm(grad))
     print(q, ' ', lr, ' ', np.linalg.norm(gradkp))
     
     if q == 0:
         res0 = np.linalg.norm(gradk)
-        
+    
+    gamma = np.linalg.norm(gradk)/res0
+    
     res_history[q,0] = q
-    res_history[q,1] = np.linalg.norm(gradk)/res0
+    res_history[q,1] = gamma
+    #res_history[p,1] = res_history[p,1]/res_history[0,1]
     
     if np.linalg.norm(gradkp) < tolerance:
         break
@@ -327,7 +302,7 @@ for q in range(max_iter):
     
     sk = lr*pk
     
-    xnew = xold + sk.flatten()/np.linalg.norm(sk.flatten())
+    xnew = xold + sk.flatten() #/np.linalg.norm(sk.flatten())
     
     xdap = lorenz(xnew,sigma,rho,beta,dt,nttrain)
     xdaobsp = xdap[ind]
