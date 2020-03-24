@@ -185,7 +185,7 @@ var = varl[q]
 std = np.sqrt(var)
 
 max_iter = 50
-tolerance = 1e-2
+tolerance = 1e-3
 
 mode = 1 # 0: Static, 1 Dynamics
 lr = 0.01
@@ -234,10 +234,12 @@ for q in range(max_iter):
     pk = -np.copy(grad)
     lr = -0.5*ofk/(grad.T @ pk)
     #print(lr)
-    xkp = xdaobs + lr*pk.reshape(1,3)
+    xoldp = xold + lr[0]*pk.flatten()
+    xdap = lorenz(xoldp,sigma,rho,beta,dt,nttrain)
+    xdaobsp = xdap[ind]
     #xkp = xdaobs + pk.reshape(1,3)
     
-    ofkp = obj_function(zobs,xkp,rk,nobs)
+    ofkp = obj_function(zobs,xdaobsp,rk,nobs)
     
     if mode == 0:
         lr = lr

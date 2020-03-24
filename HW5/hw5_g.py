@@ -114,7 +114,7 @@ if iobs == 1:
             p = p+1
 
 if iobs == 2:
-    tobs = np.array([5,6,7])
+    tobs = np.array([5,5.5,6])
     nobs = tobs.shape[0]
     ind = np.zeros(tobs.shape[0], dtype='i')
     for k in range(3):
@@ -155,6 +155,7 @@ c = np.zeros((3))
 c[0] = 2.0
 c[1] = 10.0
 c[2] = 0.3
+xw = forward(c[0],c[1],c[2],dt,nt)    
 
 ukl = np.zeros((nobs,1))
 vkl = np.zeros((nobs,2))
@@ -190,7 +191,8 @@ for it in range(max_iter):
                 
     hk = np.hstack((ukl, vkl))
     
-    deltac = np.linalg.pinv(hk) @ -ek
+    w = (1/var)*np.eye(nobs)
+    deltac = np.linalg.pinv(np.sqrt(w) @ hk) @ - (np.sqrt(w) @ ek)
         
     c = c + deltac
     print(it, ' ', c)
@@ -201,8 +203,10 @@ for it in range(max_iter):
 xn = forward(c[0],c[1],c[2],dt,nt)  \
 
 fig, ax = plt.subplots(nrows=1, ncols=1,figsize=(6,5))
-ax.plot(tobs, xobs, 'go', markersize=8, label='Observations')
-ax.plot(t, xo, 'r', lw=2,label='True')
-ax.plot(t, xn, 'b--', lw=2,label='Data assimilation')
+ax.plot(tobs, xobs, 'go', markersize=12, label='Observations')
+ax.plot(t, xo, 'r', lw=2,label='True initial condition')
+ax.plot(t, xw, 'm-.', lw=2,label='Wrong initial condition')
+ax.plot(t, xn, 'b--', lw=2,label='FSM initial condition')
 ax.legend()
 plt.show()
+fig.savefig('obs_'+str(iobs)+'.pdf')

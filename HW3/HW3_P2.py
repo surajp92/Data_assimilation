@@ -201,7 +201,7 @@ var = varl[q]
 std = np.sqrt(var)
 
 max_iter = 100
-tolerance = 1e-3
+tolerance = 1e-2
 
 mode = 1 # 0: Static, 1 Dynamics
 lr = 0.01
@@ -246,20 +246,21 @@ for q in range(max_iter):
     if q == 0:
         pk = -np.copy(gradk)
         resk = -np.copy(gradk)
-    
-    #lr = -0.5*ofk/(grad.T @ pk)
-    #xkp = xdaobs + lr*pk.reshape(1,3)    
-    xkp = xdaobs + pk.reshape(1,3)
-    
+        
     ofk = obj_function(zobs,xdaobs,rk,nobs)
+    
+    lr = -0.5*ofk/(gradk.T @ pk)
+    xkp = xdaobs + lr*pk.reshape(1,3)    
+    #xkp = xdaobs + pk.reshape(1,3)
+    
     ofkp = obj_function(zobs,xkp,rk,nobs)
     
     temp = np.dot(gradk.T,pk)
-    #lr = -temp*lr**2/(2.0*(ofkp - lr*temp - ofk))
-    lr = -temp/(2.0*(ofkp - temp - ofk))
+    lr = -temp*lr**2/(2.0*(ofkp - lr*temp - ofk))
+    #lr = -temp/(2.0*(ofkp - temp - ofk))
     lr = lr[0]
     
-    xnew = xold + lr*pk.flatten()/np.linalg.norm(pk)  #np.abs(grad.flatten())
+    xnew = xold + lr*pk.flatten() #/np.linalg.norm(pk)  #np.abs(grad.flatten())
     
     xdap = lorenz(xnew,sigma,rho,beta,dt,nttrain)
     xdaobsp = xdap[ind]
@@ -273,7 +274,7 @@ for q in range(max_iter):
     pk = -gradkp + beta_cg*pk
     
     #print(p, ' ', xold, ' ' , xnew, ' ', np.linalg.norm(grad))
-    print(q, ' ', lr, ' ', np.linalg.norm(gradkp))
+    print(q, ' ', lr, ' ', np.linalg.norm(xnew-xold))
     
     if q == 0:
         res0 = np.linalg.norm(gradk)
@@ -281,7 +282,7 @@ for q in range(max_iter):
     res_history[q,0] = q
     res_history[q,1] = np.linalg.norm(gradk)/res0
     
-    if np.linalg.norm(gradkp) < tolerance:
+    if np.linalg.norm(xnew-xold) < tolerance:
         break
 
     xold = xnew
