@@ -1,0 +1,117 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Tue Apr 14 19:17:22 2020
+
+@author: suraj
+"""
+
+import numpy as np
+from numpy.random import seed
+seed(1)
+from scipy import integrate
+from scipy import linalg
+import matplotlib.pyplot as plt 
+import time as tm
+import matplotlib.ticker as ticker
+
+font = {'family' : 'Times New Roman',
+        'size'   : 12}    
+plt.rc('font', **font)
+
+import matplotlib as mpl
+mpl.rcParams['text.usetex'] = True
+mpl.rcParams['text.latex.preamble'] = [r'\usepackage{amsmath}']
+
+#%%
+data = np.load('data_d_16.npz')
+t = data['t']
+tobs = data['tobs']
+T = data['T']
+X = data['X']
+utrue_8 = data['utrue']
+uobs_8 = data['uobs']
+uw_8 = data['uw']
+ua_8 = data['ua']
+oin8  = data['oin']
+
+data = np.load('data_d_32.npz')
+t = data['t']
+tobs = data['tobs']
+T = data['T']
+X = data['X']
+utrue_12 = data['utrue']
+uobs_12 = data['uobs']
+uw_12 = data['uw']
+ua_12 = data['ua']
+oin12  = data['oin']
+
+data = np.load('data_d_64.npz')
+t = data['t']
+tobs = data['tobs']
+T = data['T']
+X = data['X']
+utrue_20 = data['utrue']
+uobs_20 = data['uobs']
+uw_20 = data['uw']
+ua_20 = data['ua']
+oin20  = data['oin']
+
+#%%
+fig, ax = plt.subplots(3,3,sharex=True,figsize=(10,4.5))
+ymin = -5
+ymax = 5
+n = [7,50,100]
+
+c = 0
+for i in range(3):
+    ax[i,c].plot(t,utrue_8[n[i],:],'k-')
+    ax[i,c].plot(t,uw_8[n[i],:],'b--')
+    ax[i,c].plot(t,ua_8[n[i],:],'g-.')
+    if i == 0:
+        ax[i,c].plot(tobs,uobs_8[n[i],:],'ro',fillstyle='none', 
+          markersize=6,markeredgewidth=1,zorder=0)
+    
+
+    ax[i,c].set_xlim([0,np.max(t)])
+#    ax[i,c].set_ylim([ymin,ymax])
+    ax[i,c].set_ylabel(r'$u_{'+str(n[i]+1)+'}$')
+ax[i,c].set_xlabel(r'$t$')
+
+line_labels = ['True','Erroneous','EnKF-D','Observations']
+plt.figlegend(line_labels, loc = 'lower center', borderaxespad=-0.2, ncol=4, labelspacing=0.)
+
+c = 1
+for i in range(3):
+    ax[i,c].plot(t,utrue_12[n[i],:],'k-')
+    ax[i,c].plot(t,uw_12[n[i],:],'b--')
+    ax[i,c].plot(t,ua_12[n[i],:],'g-.')
+    if i == 0:
+        ax[i,c].plot(tobs,uobs_12[n[i],:],'ro',fillstyle='none', 
+          markersize=6,markeredgewidth=1,zorder=0)
+    
+    ax[i,c].set_xlim([0,np.max(t)])
+#    ax[i,c].set_ylim([ymin,ymax])
+    ax[i,c].set_ylabel(r'$u_{'+str(n[i]+1)+'}$')
+ax[i,c].set_xlabel(r'$t$')
+
+c = 2
+for i in range(3):
+    ax[i,c].plot(t,utrue_20[n[i],:],'k-')
+    ax[i,c].plot(t,uw_20[n[i],:],'b--')
+    ax[i,c].plot(t,ua_20[n[i],:],'g-.')
+    if i == 0:
+        ax[i,c].plot(tobs,uobs_20[n[i],:],'ro',fillstyle='none', 
+          markersize=6,markeredgewidth=1,zorder=0)
+
+    ax[i,c].set_xlim([0,np.max(t)])
+#    ax[i,c].set_ylim([ymin,ymax])
+    ax[i,c].set_ylabel(r'$u_{'+str(n[i]+1)+'}$')
+ax[i,c].set_xlabel(r'$t$')
+
+
+fig.tight_layout()
+plt.show() 
+fig.savefig('time_series_enkfd6.pdf',bbox_inches='tight')
+fig.savefig('time_series_enkfd6.eps',bbox_inches='tight')
+fig.savefig('time_series_enkfd6.png',bbox_inches='tight',dpi=300)
